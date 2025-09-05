@@ -18,6 +18,10 @@ Many Supabase developers don't realize that tables are **publicly accessible by 
 ## 🚀 Quick Start
 
 ```bash
+# Clone the repository
+git clone git@github.com:sahanxdissanayake/supabase-security-scanner-oss.git
+cd supabase-security-scanner-oss
+
 # Make executable
 chmod +x supabase_security_scanner.sh
 
