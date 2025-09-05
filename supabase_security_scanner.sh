@@ -1,35 +1,29 @@
 #!/bin/bash
 
-# Supabase Security Scanner
-# Tests for common RLS bypasses and data exposure vulnerabilities
-# Usage: ./supabase_security_scanner.sh <SUPABASE_URL> <ANON_KEY>
+## Supabase Security Scanner
+## Usage: ./supabase_security_scanner.sh <SUPABASE_URL> <ANON_KEY>
 
 set -euo pipefail
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Configuration
 SUPABASE_URL="${1:-}"
 ANON_KEY="${2:-}"
 OUTPUT_DIR="./supabase_security_scan_$(date +%Y%m%d_%H%M%S)"
 VERBOSE="${VERBOSE:-false}"
 
-# Check arguments
 if [[ -z "$SUPABASE_URL" || -z "$ANON_KEY" ]]; then
     echo -e "${RED}Usage: $0 <SUPABASE_URL> <ANON_KEY>${NC}"
     echo "Example: $0 https://your-project.supabase.co eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
     exit 1
 fi
 
-# Create output directory
 mkdir -p "$OUTPUT_DIR"
 
-# Logging function
 log() {
     echo -e "${BLUE}[$(date +'%H:%M:%S')]${NC} $1"
 }
@@ -46,7 +40,6 @@ success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
-# Test function
 test_endpoint() {
     local endpoint="$1"
     local test_name="$2"
@@ -75,7 +68,6 @@ test_endpoint() {
     fi
 }
 
-# CSV export test
 test_csv_export() {
     local endpoint="$1"
     local test_name="$2"
@@ -104,7 +96,6 @@ test_csv_export() {
     fi
 }
 
-# RPC test
 test_rpc() {
     local rpc_name="$1"
     local test_name="$2"
@@ -135,7 +126,6 @@ test_rpc() {
     fi
 }
 
-# Storage test
 test_storage() {
     log "Testing storage bucket listing"
     
@@ -159,7 +149,6 @@ test_storage() {
     fi
 }
 
-# Auth endpoint test
 test_auth() {
     log "Testing auth endpoint"
     
@@ -183,7 +172,6 @@ test_auth() {
     fi
 }
 
-# CORS test
 test_cors() {
     log "Testing CORS configuration"
     
@@ -206,7 +194,6 @@ test_cors() {
     fi
 }
 
-# Get OpenAPI spec to discover endpoints
 discover_endpoints() {
     log "Discovering available endpoints via OpenAPI"
     
@@ -217,7 +204,6 @@ discover_endpoints() {
     
     echo "$response" > "$OUTPUT_DIR/openapi_spec.json"
     
-    # Extract endpoint paths
     echo "$response" | jq -r '.paths | keys[]' 2>/dev/null | grep -v '^/$' > "$OUTPUT_DIR/discovered_endpoints.txt" || {
         warn "Could not parse OpenAPI spec, using default endpoints"
         cat > "$OUTPUT_DIR/discovered_endpoints.txt" << EOF
@@ -232,7 +218,6 @@ EOF
     }
 }
 
-# Generate report
 generate_report() {
     local report_file="$OUTPUT_DIR/security_report.md"
     
@@ -294,19 +279,15 @@ EOF
     log "Report generated: $report_file"
 }
 
-# Main execution
 main() {
     log "Starting Supabase Security Scan"
     log "Target: $SUPABASE_URL"
     log "Output Directory: $OUTPUT_DIR"
     
-    # Discover endpoints
     discover_endpoints
     
-    # Test common sensitive endpoints
     local vulnerable_count=0
     
-    # Test discovered endpoints
     while IFS= read -r endpoint; do
         if [[ -n "$endpoint" && "$endpoint" != "/" ]]; then
             local safe_name=$(echo "$endpoint" | sed 's#^/##; s#[^a-zA-Z0-9_\-]#_#g')
@@ -317,23 +298,17 @@ main() {
         fi
     done < "$OUTPUT_DIR/discovered_endpoints.txt"
     
-    # Test RPC functions
     test_rpc "is_admin_user" "admin_check"
     test_rpc "get_user_data" "user_data"
     
-    # Test storage
     test_storage
     
-    # Test auth
     test_auth
     
-    # Test CORS
     test_cors
     
-    # Generate report
     generate_report
     
-    # Summary
     echo ""
     log "Scan completed!"
     if [[ $vulnerable_count -gt 0 ]]; then
@@ -345,5 +320,4 @@ main() {
     echo "Full report: $OUTPUT_DIR/security_report.md"
 }
 
-# Run main function
 main "$@"
